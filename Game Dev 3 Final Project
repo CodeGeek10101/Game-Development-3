@@ -1,0 +1,227 @@
+# GAME’S PARAMETERS
+PLAYER_SPEED = 15
+OGRE_SPEED_INC = 0.5
+PLAYER_BASE_X = 3
+GEM_SCORE = 10
+DEFEATED_OGRE_SCORE = 11
+WIN_TIME = 20
+FENCE_INTERVAL = 0.3
+GEM_INTERVAL = 0.5
+OGRE_INTERVAL = 2
+GAME_SPEED = 0.5
+
+SILVER_SCORE = 10
+GOLD_SCORE = 10
+BRONZE_SCORE = 10
+POTION_SCORE = 10
+
+SILVER_INTERVAL = 0.5
+GOLD_INTERVAL = 0.5
+BRONZE_INTERVAL = 0.5
+POTION_INTERVAL = 0.5
+
+OGREF_INTERVAL = 5
+OGREF_SPEED_INC = 0.8
+
+# FOREST
+game.spawnXY("forest", -4, 64)
+game.spawnXY("forest", 4, 64)
+game.spawnXY("forest", 12, 64)
+game.spawnXY("forest", 20, 64)
+game.spawnXY("forest", 28, 64)
+game.spawnXY("forest", 36, 64)
+game.spawnXY("forest", 44, 64)
+game.spawnXY("forest", 52, 64)
+game.spawnXY("forest", 60, 64)
+game.spawnXY("forest", 68, 64)
+game.spawnXY("forest", 76, 64)
+game.spawnXY("forest", -4, 4)
+game.spawnXY("forest", 4, 4)
+game.spawnXY("forest", 12, 4)
+game.spawnXY("forest", 20, 4)
+game.spawnXY("forest", 28, 4)
+game.spawnXY("forest", 36, 4)
+game.spawnXY("forest", 44, 4)
+game.spawnXY("forest", 52, 4)
+game.spawnXY("forest", 60, 4)
+game.spawnXY("forest", 68, 4)
+game.spawnXY("forest", 76, 4)
+
+# FLOOR
+unit = game.spawnXY("x-mark-wood", 0, 49)
+unit.scale = 10000
+
+#STATIC 
+def onUpdateStatic(event):
+    thing = event.target
+    thing.pos.x -= GAME_SPEED
+    if thing.pos.x < -4:
+        if thing.type == "forest":
+            thing.pos.x = 84
+        else:
+            thing.destroy()
+
+game.setActionFor("forest", "update", onUpdateStatic)
+def spawnRandomY(type):
+    y = game.randomInteger(12, 56)
+    spawn = game.spawnXY(type, 80, y)
+    spawn.on("update", onUpdateStatic)
+
+#FENCES
+def spawnFences():
+    spawnNumber = 1 + (game.time / 10)
+    while spawnNumber >= 1:
+        spawnRandomY("fence")
+        spawnNumber -= 1
+
+#SETTINGS 
+game.spawnFenceTime = 0
+game.spawnGemTime = 0.5
+game.spawnOgreTime = 1
+game.score = 0
+game.spawnBronzeTime = 0.5
+game.spawnGoldTime = 0.5
+game.spawnSilverTime = 0.5
+game.spawnPotionTime = 0.5
+game.spawnOgreFTime = 5
+
+game.topScore = db.get("topScore") or 0
+ui.track(game, "time")
+ui.track(game, "score")
+ui.track(game, "topScore")
+goal = game.addManualGoal("Survive at least " + WIN_TIME + " seconds.")
+
+# PLAYER 
+player = game.spawnPlayerXY("duelist", PLAYER_BASE_X, 34) 
+player.maxSpeed = PLAYER_SPEED 
+player.maxHealth = 350
+
+#COLLECT 
+def onCollect(event):
+    item = event.other
+    if item.type == "gem":
+        game.score += GEM_SCORE
+
+def onCollect(event):
+    item = event.other
+    if item.type == "gold-coin":
+        game.score += GOLD_SCORE
+
+def onCollect(event):
+    item = event.other
+    if item.type == "silver-coin":
+        game.score += SILVER_SCORE
+
+def onCollect(event):
+    item = event.other
+    if item.type == "bronze-coin":
+        game.score += BRONZE_SCORE
+
+def onCollect(event):
+    item = event.other
+    if item.type == "large-potion":
+        game.score += POTION_SCORE
+
+#COLLIDE
+def onCollide(event):
+    unit = event.target
+    other = event.other
+    if other.type == "fence":
+        unit.defeat()
+
+def onDefeatPlayer():
+    if game.time > WIN_TIME:
+        game.setGoalState(goal, True)
+    else:
+        game.setGoalState(goal, False)
+    setTopScore()
+
+player.on("collect", onCollect)
+player.on("collide", onCollide)
+player.on("defeat", onDefeatPlayer)
+
+# ENEMIES 
+def onDefeatOgre(event):
+    unit = event.target
+    game.score += DEFEATED_OGRE_SCORE
+    unit.on("update", onUpdateStatic)
+
+def onUpdateOgre(event):
+    unit = event.target
+    if unit.health > 0:
+        unit.baseX += OGRE_SPEED_INC
+        if unit.baseX > PLAYER_BASE_X - 2:
+            unit.baseX = PLAYER_BASE_X - 2
+        unit.pos.x = unit.baseX
+
+def spawnOgre():
+    y = game.randomInteger(12, 56)
+    unit = game.spawnXY("munchkin", 0, y)
+    unit.baseX = 0
+    unit.on("update", onUpdateOgre)
+    unit.on("defeat", onDefeatOgre)
+    unit.on("collide", onCollide)
+    unit.behavior = "AttacksNearest"
+    unit.attackDamage = 2
+    unit.maxHealth = 10
+
+def spawnOgreF():
+    y = game.randomInteger(12, 56)
+    unit = game.spawnXY("ogre-f", 0, y)
+    unit.baseX = 0
+    unit.on("update", onUpdateOgre)
+    unit.on("defeat", onDefeatOgre)
+    unit.on("collide", onCollide)
+    unit.behavior = "AttacksNearest"
+    unit.attackDamage = 175
+    unit.maxHealth = 100
+
+#GOALS 
+game.addMoveGoalXY(3, 35)
+game.addDefeatGoal(2)
+game.addCollectGoal(10)
+game.addSurviveGoal(20)
+
+# GAME LOOP 
+def checkPlayer():
+    if game.time == WIN_TIME:
+        player.say("Win! Bonus Time!")
+    player.pos.x = PLAYER_BASE_X
+
+def setTopScore():
+    topScore = db.get("topScore") or 0
+    if game.score > game.topScore:
+        db.set("topScore", game.score)
+
+def checkSpawns():
+    if game.time > game.spawnFenceTime:
+        spawnFences()
+        game.spawnFenceTime += FENCE_INTERVAL
+    if game.time > game.spawnGemTime:
+        spawnRandomY("gem")
+        game.spawnGemTime += GEM_INTERVAL
+    if game.time > game.spawnOgreTime:
+        spawnOgre()
+        game.spawnOgreTime += OGRE_INTERVAL
+    if game.time > game.spawnGoldTime:
+        spawnRandomY("gold-coin")
+        game.spawnGoldTime += GOLD_INTERVAL
+    if game.time > game.spawnSilverTime:
+        spawnRandomY("silver-coin")
+        game.spawnSilverTime += SILVER_INTERVAL
+    if game.time > game.spawnBronzeTime:
+        spawnRandomY("bronze-coin")
+        game.spawnBronzeTime += BRONZE_INTERVAL
+    if game.time > game.spawnPotionTime:
+        spawnRandomY("potion-large")
+        game.spawnPotionTime += POTION_INTERVAL
+    if game.time > game.spawnOgreFTime:
+        spawnOgreF()
+        game.spawnOgreFTime += OGREF_INTERVAL
+
+def onUpdateGame(event):
+    checkPlayer()
+    checkSpawns()
+    game.score += event.deltaTime
+
+game.on("update", onUpdateGame)
